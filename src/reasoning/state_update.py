@@ -1,8 +1,12 @@
 """
 State propagation module.
 
-Propagates event effects into emotional state, relationship state,
-and intentions after belief updates have been applied.
+Responsible for propagating belief updates and event effects
+into emotional state, relationships, and intentions.
+
+This module operates on the CharacterState defined in
+core.data_structures and modifies internal variables
+based on the incoming event frame.
 
 All functions modify CharacterState in place and return the updated
 state for convenience.
@@ -39,6 +43,24 @@ def update_emotional_state(state: CharacterState, event: EventFrame) -> Characte
 
     Applies a plasticity-weighted shift to valence and arousal. Discrete
     emotion tag intensities are updated additively and clamped to [0, 1].
+
+    Preconditions
+    -------------
+    state : CharacterState
+        Current internal character state
+    event : EventFrame
+        Structured representation of the incoming dialogue event
+
+    Procedure
+    ---------
+    1. Read emotional tone (τt) from the event frame
+    2. Adjust valence and arousal accordingly
+    3. Update emotion tags to reflect detected emotions
+    4. Apply emotional plasticity to smooth updates
+
+    Postconditions
+    --------------
+    state.emotions updated
 
     Parameters
     ----------
@@ -81,6 +103,22 @@ def update_relationship_state(state: CharacterState, event: EventFrame) -> Chara
     Trust shifts are driven by the event's emotional tone. Only entities
     that already have a relationship entry are updated.
 
+    Preconditions
+    -------------
+    state : CharacterState
+    event : EventFrame
+
+    Procedure
+    ---------
+    1. Identify interacting entities from event.entities
+    2. Locate relationship nodes in state.relationships
+    3. Adjust trust, affection, or respect based on event tone
+    4. Apply relationship decay or reinforcement
+
+    Postconditions
+    --------------
+    state.relationships updated
+
     Parameters
     ----------
     state : CharacterState
@@ -109,6 +147,21 @@ def update_intentions(state: CharacterState) -> CharacterState:
     High-confidence positive beliefs generate approach intentions.
     High-confidence negative beliefs generate avoidance intentions.
     High arousal promotes assertive or reactive intentions.
+
+    Preconditions
+    -------------
+    state : CharacterState
+
+    Procedure
+    ---------
+    1. Analyze current belief nodes
+    2. Consider emotional state
+    3. Derive likely goals or motivations
+    4. Update intention representation
+
+    Postconditions
+    --------------
+    state.intentions updated
 
     Parameters
     ----------
@@ -144,6 +197,22 @@ def propagate_state_updates(state: CharacterState, event: EventFrame) -> Charact
     2. Update relationship state for referenced entities.
     3. Derive updated intentions from beliefs and emotions.
     4. Increment the timeline index.
+
+    Preconditions
+    -------------
+    state : CharacterState
+    event : EventFrame
+
+    Procedure
+    ---------
+    1. Update emotional state
+    2. Update relationship state
+    3. Update intentions
+    4. Increment timeline index
+
+    Postconditions
+    --------------
+    Updated CharacterState returned
 
     Parameters
     ----------

@@ -37,6 +37,21 @@ def create_initial_world_state() -> WorldState:
     """
     Create a default world state with no entities or constraints.
 
+    Preconditions
+    -------------
+    None
+
+    Procedure
+    ---------
+    1. Initialize entities
+    2. Initialize object states
+    3. Initialize constraints
+    4. Set timeline index
+
+    Postconditions
+    --------------
+    Returns WorldState
+
     Returns
     -------
     WorldState

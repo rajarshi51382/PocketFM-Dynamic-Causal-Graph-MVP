@@ -22,6 +22,20 @@ def build_generation_prompt(state: CharacterState, user_message: str) -> str:
     Serialises the highest-confidence beliefs, current emotional valence,
     and active intentions into a structured prompt template.
 
+    Preconditions
+    -------------
+    state : CharacterState
+    user_message : str
+
+    Procedure
+    ---------
+    1. Extract relevant beliefs, emotions, and intentions
+    2. Format them into a prompt template
+
+    Postconditions
+    --------------
+    Returns prompt string
+
     Parameters
     ----------
     state : CharacterState
@@ -61,6 +75,18 @@ def generate_response(prompt: str) -> Optional[str]:
     This stub returns None to indicate no LLM is connected. Callers
     should handle None gracefully.
 
+    Preconditions
+    -------------
+    prompt : str
+
+    Procedure
+    ---------
+    1. Send prompt to language model
+
+    Postconditions
+    --------------
+    Returns generated response text
+
     Parameters
     ----------
     prompt : str
@@ -79,6 +105,20 @@ def produce_dialogue(state: CharacterState, user_message: str) -> str:
 
     Builds the prompt and calls the language model. Falls back to an
     acknowledgement string if no LLM response is available.
+
+    Preconditions
+    -------------
+    state : CharacterState
+    user_message : str
+
+    Procedure
+    ---------
+    1. Build prompt
+    2. Generate response
+
+    Postconditions
+    --------------
+    Returns dialogue response
 
     Parameters
     ----------

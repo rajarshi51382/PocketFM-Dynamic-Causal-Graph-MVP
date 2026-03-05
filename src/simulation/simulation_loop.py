@@ -36,6 +36,24 @@ def simulation_turn(
        intentions).
     4. Generate and return the character's dialogue response.
 
+    Preconditions
+    -------------
+    user_message : str
+    character_state : CharacterState
+    world_state : WorldState
+
+    Procedure
+    ---------
+    1. Extract event
+    2. Validate event
+    3. Update beliefs
+    4. Propagate state changes
+    5. Generate response
+
+    Postconditions
+    --------------
+    Returns generated dialogue response
+
     Parameters
     ----------
     user_message : str
@@ -78,6 +96,22 @@ def run_simulation(
 
     Reads user input from stdin, calls simulation_turn, and prints the
     response. Returns the full conversation history.
+
+    Preconditions
+    -------------
+    initial_character_state : CharacterState
+    world_state : WorldState
+
+    Procedure
+    ---------
+    1. Receive user input
+    2. Call simulation_turn
+    3. Update timeline index
+    4. Repeat
+
+    Postconditions
+    --------------
+    Returns conversation history
 
     Parameters
     ----------

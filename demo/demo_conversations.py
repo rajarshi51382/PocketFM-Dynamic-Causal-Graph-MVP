@@ -37,6 +37,14 @@ def run_neutral_conversation() -> None:
     """
     Demonstrate a routine dialogue turn that does not shift beliefs
     significantly (narrative_importance = 1.0, low-trust source).
+
+    Preconditions
+    -------------
+    CharacterState initialized
+
+    Postconditions
+    --------------
+    Prints conversation
     """
     print("=== Neutral Conversation Demo ===\n")
 
@@ -75,6 +83,14 @@ def run_major_event_conversation() -> None:
     """
     Demonstrate a high-importance narrative event that causes a large
     belief shift (narrative_importance >> 1.0, contradicting evidence).
+
+    Preconditions
+    -------------
+    CharacterState initialized
+
+    Postconditions
+    --------------
+    Prints conversation and state changes
     """
     print("\n=== Major Event Conversation Demo ===\n")
 

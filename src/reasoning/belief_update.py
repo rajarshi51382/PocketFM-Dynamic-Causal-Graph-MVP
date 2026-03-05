@@ -32,6 +32,23 @@ def directional_alignment(event: EventFrame, belief: BeliefNode) -> int:
     proposition using a deterministic predicate comparison. Negations
     are expressed with the prefix "not_" or the tilde prefix "~".
 
+    Preconditions
+    -------------
+    event : EventFrame
+    belief : BeliefNode
+
+    Procedure
+    ---------
+    1. Compare event propositions with belief proposition
+    2. Detect semantic agreement or contradiction
+
+    Postconditions
+    --------------
+    Returns
+        +1 if event supports belief
+        -1 if event contradicts belief
+         0 if unrelated
+
     Parameters
     ----------
     event : EventFrame
@@ -64,6 +81,21 @@ def compute_source_credibility(event: EventFrame, state: CharacterState) -> floa
     Returns 1.0 for direct observations. For character or user sources,
     the trust value is retrieved from the character's relationship graph.
     Falls back to 0.5 for unknown sources.
+
+    Preconditions
+    -------------
+    event : EventFrame
+    state : CharacterState
+
+    Procedure
+    ---------
+    1. Identify speaker in event
+    2. Retrieve relationship state
+    3. Map trust/respect into credibility score
+
+    Postconditions
+    --------------
+    Returns credibility value between 0 and 1
 
     Parameters
     ----------
@@ -103,6 +135,23 @@ def update_belief_log_odds(
     No-op when the event is directionally unrelated to the belief.
     The event speaker is appended to belief.evidence_sources on update.
 
+    Preconditions
+    -------------
+    belief : BeliefNode
+    event : EventFrame
+    credibility : float
+    lambda_base : float
+
+    Procedure
+    ---------
+    1. Compute directional alignment
+    2. Multiply by credibility and event confidence
+    3. Update belief log-odds
+
+    Postconditions
+    --------------
+    belief.log_odds updated
+
     Parameters
     ----------
     belief : BeliefNode
@@ -137,6 +186,20 @@ def resolve_belief_conflicts(beliefs: Dict[str, BeliefNode]) -> Dict[str, Belief
         p'_i = p_i / (p_i + p_j),  p'_j = p_j / (p_i + p_j)
 
     The log-odds are then updated to reflect the renormalised values.
+
+    Preconditions
+    -------------
+    beliefs : dict[str, BeliefNode]
+
+    Procedure
+    ---------
+    1. Detect logically conflicting propositions
+    2. Reduce confidence in weaker beliefs
+    3. Normalize belief set
+
+    Postconditions
+    --------------
+    Returns updated belief dictionary
 
     Parameters
     ----------
@@ -187,6 +250,22 @@ def apply_belief_updates(
     1. Compute source credibility from the event speaker.
     2. Apply the log-odds update to every belief that the event touches.
     3. Resolve any resulting contradictions via pairwise normalisation.
+
+    Preconditions
+    -------------
+    state : CharacterState
+    event : EventFrame
+
+    Procedure
+    ---------
+    1. Compute credibility
+    2. Identify affected beliefs
+    3. Apply log-odds updates
+    4. Resolve conflicts
+
+    Postconditions
+    --------------
+    Updated CharacterState beliefs
 
     Parameters
     ----------
