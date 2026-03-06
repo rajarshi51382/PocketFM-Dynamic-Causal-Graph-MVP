@@ -10,7 +10,8 @@ tests and offline demos.
 """
 
 import math
-from typing import Optional
+import re
+from typing import Optional, List
 
 from core.data_structures import CharacterState
 
@@ -46,20 +47,23 @@ def build_generation_prompt(state: CharacterState, user_message: str) -> str:
     str
     """
     belief_lines = []
+    # Use probability for easier reading in the prompt
     for prop, node in state.beliefs.items():
-        prob = 1.0 / (1.0 + math.exp(-node.log_odds))
-        belief_lines.append(f"  {prop}: {prob:.2f}")
+        belief_lines.append(f"  {prop}: {node.probability:.2f}")
 
     beliefs_text = "\n".join(belief_lines) if belief_lines else "  (none)"
     intentions_text = ", ".join(state.intentions) if state.intentions else "(none)"
     valence = state.emotions.valence
+    arousal = state.emotions.arousal
+    dominant = state.emotions.dominant_emotion() or "neutral"
 
     prompt = (
-        f"Character state:\n"
-        f"  valence={valence:.2f}, arousal={state.emotions.arousal:.2f}\n"
-        f"  intentions: {intentions_text}\n"
-        f"Beliefs:\n{beliefs_text}\n\n"
+        f"Character ID: {state.character_id}\n"
+        f"Current Emotion: {dominant} (valence={valence:.2f}, arousal={arousal:.2f})\n"
+        f"Intentions: {intentions_text}\n"
+        f"Beliefs (proposition: probability):\n{beliefs_text}\n\n"
         f"User: {user_message}\n"
+        f"Character response style: {state.traits}\n"
         f"Character:"
     )
     return prompt
@@ -67,13 +71,11 @@ def build_generation_prompt(state: CharacterState, user_message: str) -> str:
 
 def generate_response(prompt: str) -> Optional[str]:
     """
-    Generate dialogue using the language model.
+    Generate dialogue using a rule-based fallback (simulating an LLM).
 
-    In production: sends the prompt to the configured LLM endpoint and
-    returns the generated text.
-
-    This stub returns None to indicate no LLM is connected. Callers
-    should handle None gracefully.
+    In production: sends the prompt to the configured LLM endpoint.
+    This MVP implementation parses the prompt to generate a response
+    consistent with the character state.
 
     Preconditions
     -------------
@@ -81,7 +83,9 @@ def generate_response(prompt: str) -> Optional[str]:
 
     Procedure
     ---------
-    1. Send prompt to language model
+    1. Parse emotional state and intentions from the prompt.
+    2. Select a response template based on valence and arousal.
+    3. Incorporate intentions if present.
 
     Postconditions
     --------------
@@ -94,17 +98,48 @@ def generate_response(prompt: str) -> Optional[str]:
     Returns
     -------
     Optional[str]
-        Generated response text, or None if no LLM is available.
+        Generated response text.
     """
-    return None
+    # Parse valence and arousal
+    v_match = re.search(r'valence=([-\d.]+)', prompt)
+    a_match = re.search(r'arousal=([-\d.]+)', prompt)
+    i_match = re.search(r'Intentions: (.+)', prompt)
+    
+    valence = float(v_match.group(1)) if v_match else 0.0
+    arousal = float(a_match.group(1)) if a_match else 0.5
+    intentions = i_match.group(1) if i_match else "(none)"
+
+    # Response selection logic
+    if valence > 0.3:
+        if arousal > 0.6:
+            base = "I am thrilled by this! "
+        else:
+            base = "I am pleased to hear that. "
+    elif valence < -0.3:
+        if arousal > 0.6:
+            base = "This is unacceptable! "
+        else:
+            base = "This is quite disappointing. "
+    else:
+        if arousal > 0.6:
+            base = "I am listening intently. "
+        else:
+            base = "I see. "
+
+    if intentions != "(none)":
+        base += f"Regarding my goal of {intentions}, I think we should proceed carefully."
+    else:
+        base += "What else can you tell me?"
+
+    return base
 
 
 def produce_dialogue(state: CharacterState, user_message: str) -> str:
     """
     Main generation pipeline.
 
-    Builds the prompt and calls the language model. Falls back to an
-    acknowledgement string if no LLM response is available.
+    Builds the prompt and calls the generation function.
+    Ensures a response is always returned.
 
     Preconditions
     -------------
@@ -115,6 +150,7 @@ def produce_dialogue(state: CharacterState, user_message: str) -> str:
     ---------
     1. Build prompt
     2. Generate response
+    3. Fallback if generation fails
 
     Postconditions
     --------------
@@ -132,6 +168,9 @@ def produce_dialogue(state: CharacterState, user_message: str) -> str:
     """
     prompt = build_generation_prompt(state, user_message)
     response = generate_response(prompt)
+    
     if response is None:
-        return "[LLM not connected -- state updated internally]"
+        # Emergency fallback
+        return "I'm not sure how to respond to that right now."
+        
     return response

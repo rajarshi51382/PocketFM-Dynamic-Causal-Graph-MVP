@@ -185,7 +185,7 @@ class RelationshipState:
     plasticity: float     ∈ [0, 1]
     """
 
-def __init__(
+    def __init__(
         self,
         entity_id: str = "",
         trust: float = 0.5,
@@ -493,7 +493,7 @@ class WorldState:
     timeline_index: int               canonical story time T
     """
 
-     def __init__(
+    def __init__(
         self,
         entities: Optional[Dict[str, dict]] = None,
         object_states: Optional[Dict[str, Any]] = None,
@@ -606,7 +606,7 @@ class EventFrame:
     propositions : list[str]   P_t — asserted propositions
     entities     : list[str]   E_t — referenced entity IDs
     speaker      : str         a_t — who is speaking
-    tone         : str         τ_t — emotional tone label
+    emotional_tone: str        τ_t — emotional tone label
     confidence   : float       c_t ∈ [0, 1]
     turn_index   : int         which dialogue turn this came from
     source_text  : str         raw input (for provenance / debugging)
@@ -617,7 +617,7 @@ class EventFrame:
         propositions: Optional[List[str]] = None,
         entities: Optional[List[str]] = None,
         speaker: str = "unknown",
-        tone: str = "neutral",
+        emotional_tone: str = "neutral",
         confidence: float = 1.0,
         turn_index: int = 0,
         source_text: str = "",
@@ -625,7 +625,7 @@ class EventFrame:
         self.propositions: List[str] = list(propositions or [])
         self.entities: List[str] = list(entities or [])
         self.speaker: str = str(speaker)
-        self.tone: str = str(tone)
+        self.emotional_tone: str = str(emotional_tone)
         self.confidence: float = _validate_unit(confidence, "confidence")
         self.turn_index: int = int(turn_index)
         self.source_text: str = str(source_text)
@@ -650,7 +650,7 @@ class EventFrame:
             "propositions": list(self.propositions),
             "entities": list(self.entities),
             "speaker": self.speaker,
-            "tone": self.tone,
+            "emotional_tone": self.emotional_tone,
             "confidence": self.confidence,
             "turn_index": self.turn_index,
             "source_text": self.source_text,
@@ -662,7 +662,7 @@ class EventFrame:
             propositions=d.get("propositions"),
             entities=d.get("entities"),
             speaker=d.get("speaker", "unknown"),
-            tone=d.get("tone", "neutral"),
+            emotional_tone=d.get("emotional_tone") or d.get("tone") or "neutral",
             confidence=d.get("confidence", 1.0),
             turn_index=d.get("turn_index", 0),
             source_text=d.get("source_text", ""),
@@ -673,6 +673,6 @@ class EventFrame:
             f"EventFrame(speaker={self.speaker!r}, "
             f"props={len(self.propositions)}, "
             f"entities={self.entities}, "
-            f"tone={self.tone!r}, c={self.confidence:.2f})"
+            f"tone={self.emotional_tone!r}, c={self.confidence:.2f})"
         )
 
