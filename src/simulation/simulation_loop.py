@@ -19,7 +19,7 @@ from generation.dialogue_generation import produce_dialogue
 from reasoning.belief_update import apply_belief_updates, DIRECT_OBSERVATION
 from reasoning.state_update import propagate_state_updates
 from reasoning.causal_propagation import propagate_causal_effects
-
+from reasoning.verifier import verify_dialogue
 
 def simulation_turn(
     user_message: str,
@@ -84,7 +84,14 @@ def simulation_turn(
             from reasoning.state_update import update_emotional_state
             update_emotional_state(character_state, event)
 
-    return produce_dialogue(character_state, user_message)
+    response = produce_dialogue(character_state, user_message)
+
+    is_valid, violations = verify_dialogue(response, character_state)
+    if not is_valid:
+        reason = violations[0] if violations else "unknown_violation"
+        response = f"I'm not sure that would be consistent with what I know. [{reason}]"
+    
+    return response
 
 
 def run_simulation(
