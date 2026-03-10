@@ -363,6 +363,7 @@ class CharacterState:
         self.traits: TraitState = traits or TraitState(traits={})
         self.emotions: EmotionState = emotions or EmotionState()
         self.beliefs: Dict[str, BeliefNode] = dict(beliefs or {})
+        self.belief_schema: Set[str] = {k.strip().lower() for k in self.beliefs.keys()}
         self.relationships: Dict[str, RelationshipState] = dict(relationships or {})
         self.intentions: List[str] = list(intentions or [])
         self.timeline_index: int = int(timeline_index)
@@ -375,6 +376,7 @@ class CharacterState:
     def add_belief(self, belief: BeliefNode) -> None:
         """Insert or overwrite a belief keyed by its proposition."""
         self.beliefs[belief.proposition] = belief
+        self.belief_schema.add(belief.proposition.strip().lower())
 
     def get_belief(self, proposition: str) -> Optional[BeliefNode]:
         return self.beliefs.get(proposition)
@@ -390,6 +392,20 @@ class CharacterState:
             "consequent": consequent,
             "weight": float(weight)
         })
+    
+    def refresh_belief_schema(self) -> None:
+        """Sync the schema with currently tracked canonical beliefs."""
+        self.belief_schema = {k.strip().lower() for k in self.beliefs.keys()}
+    
+    def is_valid_predicate(self, proposition: str) -> bool:
+        """Return True if the proposition belongs to the allowed belief schema."""
+        p = proposition.strip().lower()
+        if p.startswith("not_"):
+            p = p[4:]
+        elif p.startswith("~"):
+            p = p[1:]
+        return p in self.belief_schema
+
 
     # -- relationship helpers ----------------------------------------------
 
@@ -446,11 +462,12 @@ class CharacterState:
             "knowledge_boundary": self.knowledge_boundary,
             "world_constraints": list(self.world_constraints),
             "causal_links": list(self.causal_links),
+            "belief_schema": list(self.belief_schema),
         }
 
     @classmethod
     def from_dict(cls, d: dict) -> "CharacterState":
-        return cls(
+        state = cls(
             character_id=d.get("character_id", "default"),
             traits=TraitState.from_dict(d["traits"]),
             emotions=EmotionState.from_dict(d["emotions"]),
@@ -467,6 +484,11 @@ class CharacterState:
             world_constraints=d.get("world_constraints", []),
             causal_links=d.get("causal_links", []),
         )
+        state.belief_schema = set(
+            d.get("belief_schema", [k.strip().lower() for k in state.beliefs.keys()])
+        )
+        return state
+        
 
     def __repr__(self) -> str:
         return (

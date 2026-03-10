@@ -32,6 +32,63 @@ _TONE_MAP = {
     "anticipation": ["hope", "expect", "wait", "looking forward"]
 }
 
+def _normalize_base_prop(prop: str) -> str:
+    p = prop.strip().lower()
+    if p.startswith("not_"):
+        return p[4:]
+    if p.startswith("~"):
+        return p[1:]
+    return p
+
+def _canonicalize_proposition(prop: str, allowed_predicates: set[str]) -> str | None:
+    """
+    Map extracted proposition into the existing belief schema.
+    Returns canonical proposition string, usually:
+      - king_is_wise
+      - not_king_is_wise
+    Returns None if no safe mapping is found.
+    """
+    p = prop.strip().lower()
+
+    if not p:
+        return None
+
+    # already in canonical positive form
+    base = _normalize_base_prop(p)
+    if base in allowed_predicates:
+        if p.startswith("not_") or p.startswith("~"):
+            return f"not_{base}"
+        return base
+
+    # lightweight antonym / alias mapping for current MVP
+    alias_to_canonical = {
+        "king_is_evil": "not_king_is_wise",
+        "king_is_bad": "not_king_is_wise",
+        "king_is_foolish": "not_king_is_wise",
+        "king_is_liar": "not_king_is_wise",
+        
+        "king_evil": "not_king_is_wise",
+        "king_bad": "not_king_is_wise",
+        "king_foolish": "not_king_is_wise",
+        "king_liar": "not_king_is_wise",
+        
+        "castle_is_dangerous": "not_castle_is_safe",
+        "castle_is_unsafe": "not_castle_is_safe",
+        "fortress_is_crumbling": "not_castle_is_safe",
+        
+        "castle_dangerous": "not_castle_is_safe",
+        "castle_unsafe": "not_castle_is_safe",
+        "fortress_crumbling": "not_castle_is_safe",
+    }
+
+    if p in alias_to_canonical:
+        mapped = alias_to_canonical[p]
+        mapped_base = _normalize_base_prop(mapped)
+        if mapped_base in allowed_predicates:
+            return mapped
+
+    return None
+
 def extract_event(user_message: str) -> EventFrame:
     """
     Convert raw dialogue into a structured event frame.
@@ -167,7 +224,11 @@ def _extract_event_rules(user_message: str) -> EventFrame:
     )
 
 
-def validate_event(event: EventFrame, user_message: str) -> EventFrame:
+def validate_event(
+    event: EventFrame,
+    user_message: str,
+    allowed_predicates: set[str] | None = None,
+) -> EventFrame:
     """
     Validate extraction output and adjust confidence.
 
@@ -208,6 +269,20 @@ def validate_event(event: EventFrame, user_message: str) -> EventFrame:
     if len(user_message.split()) > 10 and len(event.propositions) == 1:
         event.confidence *= 0.8
 
+    if allowed_predicates is not None:
+        canonical_props = []
+        for prop in event.propositions:
+            mapped = _canonicalize_proposition(prop, allowed_predicates)
+            if mapped is not None:
+                canonical_props.append(mapped)
+        
+        # dedupe while preserving order
+        seen = set()
+        event.propositions = [
+            p for p in canonical_props
+            if not (p in seen or seen.add(p))
+        ]
+    
     # Final clamping
     event.confidence = max(0.0, min(1.0, event.confidence))
     

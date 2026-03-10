@@ -62,6 +62,9 @@ def create_demo_character() -> CharacterState:
     # If the forest is dangerous, the castle is even safer (contrast/refuge)
     state.add_causal_link(antecedent="forest_is_dangerous", consequent="castle_is_safe", weight=0.5)
 
+    # If the castle is not safe, the king is likely not wise (correlation)
+    state.add_causal_link(antecedent="not_castle_is_safe", consequent="not_king_is_wise", weight=0.8)
+    
     return state
 
 def main():
@@ -123,7 +126,7 @@ def main():
         print(f"  Emotion: {dom_emotion} (v={character.emotions.valence:.2f}, a={character.emotions.arousal:.2f})")
         print(f"  Top Intentions: {character.intentions}")
         print(f"  Active Beliefs:")
-        for b in character.high_confidence_beliefs(0.6):
+        for b in character.beliefs.values():
             print(f"    - {b.proposition}: {b.probability:.2f}")
         print("-" * 40 + "\n")
 

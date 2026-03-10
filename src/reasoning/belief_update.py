@@ -276,6 +276,11 @@ def apply_belief_updates(
         else:
             base_prop = p_norm
             
+        # Only allow discovery if no schema exists OR predicate is explicitly allowed
+        if hasattr(state, "belief_schema") and state.belief_schema:
+            if base_prop not in state.belief_schema:
+                continue
+
         if base_prop not in state.beliefs and f"not_{base_prop}" not in state.beliefs:
             # Create new belief node with neutral prior (log_odds=0.0)
             # then apply the update immediately

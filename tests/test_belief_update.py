@@ -290,7 +290,53 @@ class TestApplyBeliefUpdates:
         event = make_event(["x"], speaker="self", confidence=1.0)
         apply_belief_updates(state, event, lambda_base=1.0)
         assert state.beliefs["x"].log_odds == pytest.approx(0.0)
-
+    
+    def test_schema_canonicalization_allows_negative_evidence_to_hit_existing_belief(self):
+        from extraction.event_extraction import validate_event
+        
+        state = CharacterState()
+        state.add_belief(BeliefNode("king_is_wise", 1.0))
+        state.add_belief(BeliefNode("castle_is_safe", 1.0))
+        
+        raw_event = EventFrame(
+            propositions=["king_is_evil"],
+            entities=[],
+            speaker="user",
+            confidence=1.0,
+        )
+        
+        event = validate_event(
+            raw_event,
+            "The king is evil.",
+            allowed_predicates=state.belief_schema,
+        )
+        
+        assert "not_king_is_wise" in event.propositions
+        
+        before = state.get_belief("king_is_wise").log_odds
+        apply_belief_updates(state, event, lambda_base=0.5)
+        after = state.get_belief("king_is_wise").log_odds
+        
+        assert after < before
+    
+    def test_counterfactual_parent_intervention_reduces_inflation(self):
+        from reasoning.causal_propagation import propagate_causal_effects
+        
+        state = CharacterState()
+        state.add_belief(BeliefNode("castle_is_safe", 2.0))
+        state.add_belief(BeliefNode("king_is_wise", 0.0))
+        state.add_causal_link("castle_is_safe", "king_is_wise", weight=1.0)
+        
+        factual = state.copy()
+        propagate_causal_effects(factual)
+        factual_score = factual.get_belief("king_is_wise").log_odds
+        
+        counterfactual = state.copy()
+        counterfactual.get_belief("castle_is_safe").log_odds = 0.0
+        propagate_causal_effects(counterfactual)
+        counterfactual_score = counterfactual.get_belief("king_is_wise").log_odds
+        
+        assert factual_score > counterfactual_score
 
 # ---------------------------------------------------------------------------
 # Internal utility functions

@@ -59,7 +59,11 @@ def simulation_turn(
 
     # 2. Extract and validate user event
     event = extract_event(user_message)
-    event = validate_event(event, user_message)
+    event = validate_event(
+        event,
+        user_message,
+        allowed_predicates=character_state.belief_schema,
+    )
 
     # 3. Epistemic Filtering & Update
     if event.confidence > 0.0:
