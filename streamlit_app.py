@@ -256,6 +256,7 @@ st.markdown(
     "belief revision, causal propagation, and conditioned dialogue generation. "
     "**All features work instantly — no API keys required!**"
 )
+st.caption(f"Deployed version: `{_get_commit_label()}`")
 
 left_col, right_col = st.columns([3, 2], gap="large")
 
