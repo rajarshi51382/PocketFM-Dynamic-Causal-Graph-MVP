@@ -19,13 +19,55 @@ where:
 import math
 from typing import Dict
 
-from core.data_structures import BeliefNode, CharacterState, EventFrame
+from core.data_structures import (
+    CharacterState,
+    BeliefNode,
+    EventFrame,
+    RelationshipState,
+    _clamp,
+)
+
 
 DIRECT_OBSERVATION = "DirectObservation"
 
-
-def directional_alignment(event: EventFrame, belief: BeliefNode) -> int:
+def directional_alignment(event: EventFrame, proposition: str) -> int:
     """
+    Determine whether event supports, contradicts, or is irrelevant
+    to a given belief proposition.
+
+    Uses two mechanisms (checked in order):
+      1. Polarity dict (PI's approach): event.polarities[prop] = ±1
+      2. Legacy NOT_ prefix: event asserts "NOT_prop" → -1
+
+    Returns
+    -------
+    +1  if event asserts the proposition
+    -1  if event contradicts the proposition
+     0  if event is irrelevant
+    """
+    p_norm = proposition.strip().lower()
+    prop_list = [p.strip().lower() for p in event.propositions]
+
+    # Check if proposition is mentioned at all
+    if p_norm in prop_list:
+        #check polarity
+        return event.get_polarity(p_norm)
+
+    #in case NOT prefix canonlicization not done yet, check NOT_ prefix convention (backward compat with Saleena's code)
+    if f"not_{p_norm}" in prop_list or f"~{p_norm}" in prop_list:
+        return -1
+
+    # Check if a NOT_-prefixed proposition maps back to this one
+    for p in prop_list:
+        if p.startswith("not_") and p[4:] == p_norm:
+            return -1
+        if p.startswith("~") and p[1:] == p_norm:
+            return -1
+
+    return 0
+'''
+old directional alignment:
+def directional_alignment(event: EventFrame, belief: BeliefNode) -> int:
     Determine whether an event supports or contradicts a belief.
 
     Preconditions
@@ -40,12 +82,12 @@ def directional_alignment(event: EventFrame, belief: BeliefNode) -> int:
     Postconditions
     --------------
     Returns +1 (supports), -1 (contradicts), or 0 (unrelated)
-    """
     if event.asserts(belief.proposition):
         return +1
     if event.denies(belief.proposition):
         return -1
     return 0
+'''
 
 
 def compute_source_credibility(event: EventFrame, state: CharacterState) -> float:
