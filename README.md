@@ -2,21 +2,24 @@
 
 A lightweight structured-state framework for persistent fictional agents in long-form dialogue systems.
 
-## Live Demo
+## 🚀 Live Demo
 
-**Try it online → [https://pocketfm-dynamic-causal-graph-mvp.streamlit.app](https://pocketfm-dynamic-causal-graph-mvp.streamlit.app)**
+**Try it online → [https://causal-character-graphs.streamlit.app](https://causal-character-graphs.streamlit.app)**
 
-[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://pocketfm-dynamic-causal-graph-mvp.streamlit.app)
+[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://causal-character-graphs.streamlit.app)
 
-The demo runs in your browser with no installation required.  All features are live:
+### ✨ All Features Work Free — No API Keys Required!
+
+The demo runs in your browser with no installation or API keys needed. All features are live:
 - **Belief revision** — log-odds updates as you chat
 - **Causal propagation** — A→B belief graph updates in real time
 - **Emotional state** — valence / arousal bars update after each turn
 - **Relationship tracking** — trust, affection, respect per entity
-- **LLM dialogue** — enter a Gemini API key for full LLM-powered responses;
-  falls back to rule-based generation when no key is present
+- **Smart dialogue generation** — contextually-aware character responses
 - **Scenario presets** — one-click narrative events
 - **Save / load / download** — persist and restore the full simulation state
+
+> **Optional**: Add a Gemini API key for enhanced LLM-powered responses
 
 ## Overview
 
@@ -100,10 +103,10 @@ Then open `http://localhost:8501` in your browser.
 2. Go to **[share.streamlit.io](https://share.streamlit.io)** and sign in with GitHub.
 3. Click **"New app"** → select your repository and branch.
 4. Set the **Main file path** to `streamlit_app.py`.
-5. *(Optional)* Add `GEMINI_API_KEY` as a secret in **Advanced settings → Secrets**
-   to enable full LLM-powered responses.
-6. Click **Deploy** — your app will be live at a permanent `*.streamlit.app` URL
-   within minutes.
+5. **Set a custom subdomain** (e.g., `causal-character-graphs`) in Advanced settings for a clean URL.
+6. Click **Deploy** — your app will be live at a permanent `*.streamlit.app` URL within minutes.
+
+> **Note**: No API keys or secrets are required. All features work out of the box!
 
 ## Running Tests
 

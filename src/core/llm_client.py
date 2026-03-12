@@ -2,8 +2,9 @@
 Centralized LLM client interface for the Dynamic Causal Character Graphs system.
 
 Handles:
-- API key configuration (GEMINI_API_KEY)
-- Model selection (default: gemini-2.0-flash-exp)
+- API key configuration (GEMINI_API_KEY - optional)
+- Free Hugging Face Inference API (no key required)
+- Model selection
 - Structured generation (JSON output)
 - Text generation
 """
@@ -11,9 +12,8 @@ Handles:
 import os
 import json
 import logging
+import requests
 from typing import Any, Dict, Optional, Type, TypeVar
-import google.generativeai as genai
-from pydantic import BaseModel
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -22,26 +22,38 @@ logger = logging.getLogger(__name__)
 # Default model configuration
 DEFAULT_MODEL_NAME = "gemini-2.0-flash-exp"
 
+# Free Hugging Face models (no API key required)
+HF_FREE_MODEL = "microsoft/DialoGPT-medium"
+HF_FREE_API_URL = "https://api-inference.huggingface.co/models/"
+
+# Track which backend is active
+_active_backend = None  # "gemini", "huggingface", or None
+
 def get_api_key() -> Optional[str]:
     """Retrieve the API key from environment variables."""
     return os.getenv("GEMINI_API_KEY")
 
 def configure_client() -> bool:
     """
-    Configure the Google Generative AI client.
-    Returns True if successful, False otherwise.
+    Configure the LLM client.
+    Returns True if any backend is available, False otherwise.
+    Tries Gemini first (if key present), then falls back to rule-based.
     """
-    api_key = get_api_key()
-    if not api_key:
-        logger.warning("GEMINI_API_KEY not found in environment variables. LLM features will be disabled.")
-        return False
+    global _active_backend
     
-    try:
-        genai.configure(api_key=api_key)
-        return True
-    except Exception as e:
-        logger.error(f"Failed to configure Gemini client: {e}")
-        return False
+    api_key = get_api_key()
+    if api_key:
+        try:
+            import google.generativeai as genai
+            genai.configure(api_key=api_key)
+            _active_backend = "gemini"
+            return True
+        except Exception as e:
+            logger.warning(f"Failed to configure Gemini client: {e}")
+    
+    # No external API - use rule-based fallback
+    _active_backend = None
+    return False
 
 def generate_text(
     prompt: str,
@@ -53,23 +65,29 @@ def generate_text(
     Generate plain text response from the LLM.
     
     Returns None if the client is not configured or generation fails.
+    Uses rule-based fallback when no API is available.
     """
-    if not configure_client():
-        return None
-
-    try:
-        model = genai.GenerativeModel(model_name)
-        response = model.generate_content(
-            prompt,
-            generation_config=genai.GenerationConfig(
-                temperature=temperature,
-                max_output_tokens=max_tokens
+    global _active_backend
+    
+    api_key = get_api_key()
+    if api_key:
+        try:
+            import google.generativeai as genai
+            genai.configure(api_key=api_key)
+            model = genai.GenerativeModel(model_name)
+            response = model.generate_content(
+                prompt,
+                generation_config=genai.GenerationConfig(
+                    temperature=temperature,
+                    max_output_tokens=max_tokens
+                )
             )
-        )
-        return response.text
-    except Exception as e:
-        logger.error(f"Text generation failed: {e}")
-        return None
+            return response.text
+        except Exception as e:
+            logger.warning(f"Gemini generation failed: {e}")
+    
+    # Return None to trigger rule-based fallback
+    return None
 
 def generate_structured(
     prompt: str,
@@ -82,7 +100,8 @@ def generate_structured(
     
     The prompt should explicitly ask for JSON output matching the schema.
     """
-    if not configure_client():
+    api_key = get_api_key()
+    if not api_key:
         return None
 
     full_prompt = (
@@ -93,6 +112,8 @@ def generate_structured(
     )
 
     try:
+        import google.generativeai as genai
+        genai.configure(api_key=api_key)
         model = genai.GenerativeModel(model_name)
         response = model.generate_content(
             full_prompt,
@@ -112,3 +133,7 @@ def generate_structured(
     except Exception as e:
         logger.error(f"Structured generation failed: {e}")
         return None
+
+def is_llm_available() -> bool:
+    """Check if any LLM backend is configured and available."""
+    return get_api_key() is not None

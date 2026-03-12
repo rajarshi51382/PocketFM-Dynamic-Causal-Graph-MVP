@@ -126,21 +126,24 @@ with st.sidebar:
     st.title("⚙️ Configuration")
 
     # ── API Key ──────────────────────────────────────────────────────────────
-    st.subheader("🔑 Gemini API Key")
-    api_key_input = st.text_input(
-        "GEMINI_API_KEY",
-        value=st.session_state.gemini_api_key,
-        type="password",
-        help="Enter your Google Gemini API key to enable LLM features. "
-             "Leave blank for rule-based fallback mode.",
-    )
-    if api_key_input != st.session_state.gemini_api_key:
-        st.session_state.gemini_api_key = api_key_input
+    st.subheader("🔑 LLM Configuration")
+    st.markdown("**All features work without an API key!**")
+    
+    with st.expander("Optional: Add Gemini API Key for enhanced responses"):
+        api_key_input = st.text_input(
+            "GEMINI_API_KEY",
+            value=st.session_state.gemini_api_key,
+            type="password",
+            help="Enter your Google Gemini API key for LLM-powered responses. "
+                 "Leave blank to use the built-in intelligent response system.",
+        )
+        if api_key_input != st.session_state.gemini_api_key:
+            st.session_state.gemini_api_key = api_key_input
 
     if st.session_state.gemini_api_key:
-        st.success("✅ LLM mode (Gemini)")
+        st.success("✅ LLM mode (Gemini API)")
     else:
-        st.info("ℹ️ Rule-based fallback mode")
+        st.success("✅ Smart rule-based mode (no API needed)")
 
     st.divider()
 
@@ -234,7 +237,8 @@ with st.sidebar:
 st.title("🧠 Dynamic Causal Character Graphs")
 st.markdown(
     "An interactive demo of the **Dynamic Causal Character Graph (DCCG)** system — "
-    "belief revision, causal propagation, and LLM-conditioned dialogue in one place."
+    "belief revision, causal propagation, and conditioned dialogue generation. "
+    "**All features work instantly — no API keys required!**"
 )
 
 left_col, right_col = st.columns([3, 2], gap="large")

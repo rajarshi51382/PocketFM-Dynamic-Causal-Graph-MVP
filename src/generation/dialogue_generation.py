@@ -5,12 +5,13 @@ Generates character responses conditioned on the updated CharacterState.
 
 In production this module builds a structured prompt from the character's
 beliefs, emotions, and intentions, then calls an LLM to produce a response.
-The stubs below implement a deterministic template-based fallback used in
-tests and offline demos.
+The stubs below implement a sophisticated template-based fallback used in
+tests, offline demos, and free deployment.
 """
 
 import math
 import re
+import random
 import logging
 from typing import Optional, List
 
@@ -18,6 +19,82 @@ from core.data_structures import CharacterState
 from core import llm_client
 
 logger = logging.getLogger(__name__)
+
+# Rich response templates for engaging rule-based dialogue
+RESPONSE_TEMPLATES = {
+    "positive_high_arousal": [
+        "By the stars, this fills me with hope! {context}",
+        "Excellent news! My heart races with anticipation. {context}",
+        "This is wonderful to hear! {context}",
+        "I feel invigorated by these tidings! {context}",
+        "Such fortune! This changes everything. {context}",
+    ],
+    "positive_low_arousal": [
+        "That is good to know. {context}",
+        "I am pleased by this development. {context}",
+        "This brings me some comfort. {context}",
+        "Indeed, this is reassuring news. {context}",
+        "I appreciate you sharing this. {context}",
+    ],
+    "negative_high_arousal": [
+        "What treachery is this?! {context}",
+        "This cannot stand! {context}",
+        "By all that is sacred, this is dire news! {context}",
+        "I am outraged! {context}",
+        "This demands immediate action! {context}",
+    ],
+    "negative_low_arousal": [
+        "This troubles me deeply... {context}",
+        "Alas, I feared as much. {context}",
+        "This is... most unfortunate. {context}",
+        "A heavy burden to bear. {context}",
+        "I must think on this carefully. {context}",
+    ],
+    "neutral_high_arousal": [
+        "I listen with keen interest! {context}",
+        "You have my full attention. {context}",
+        "Intriguing... tell me more. {context}",
+        "This is noteworthy indeed. {context}",
+        "I am eager to understand this better. {context}",
+    ],
+    "neutral_low_arousal": [
+        "I see. {context}",
+        "Very well. {context}",
+        "That is noted. {context}",
+        "I understand. {context}",
+        "Please, continue. {context}",
+    ],
+}
+
+BELIEF_CONTEXT = {
+    "castle_is_safe": {
+        True: "The castle remains our sanctuary.",
+        False: "If the castle is no longer safe, we must find shelter elsewhere.",
+    },
+    "forest_is_dangerous": {
+        True: "The forest paths are treacherous indeed.",
+        False: "Perhaps the forest is not as perilous as we thought.",
+    },
+    "king_is_wise": {
+        True: "The king's wisdom guides us well.",
+        False: "I begin to question the king's judgment.",
+    },
+}
+
+TRAIT_MODIFIERS = {
+    "bravery": {
+        "high": "I shall face whatever comes with courage.",
+        "low": "We must proceed with utmost caution.",
+    },
+    "honesty": {
+        "high": "I speak only the truth as I know it.",
+        "low": "Some truths are best left unspoken.",
+    },
+    "trusting": {
+        "high": "I believe in the good intentions of others.",
+        "low": "Experience has taught me to be wary.",
+    },
+}
 
 def build_generation_prompt(state: CharacterState, user_message: str) -> str:
     """
@@ -119,41 +196,78 @@ def generate_response(prompt: str) -> Optional[str]:
     return _generate_response_rules(prompt)
 
 
-def _generate_response_rules(prompt: str) -> Optional[str]:
-    """Original rule-based fallback logic."""
-    # Parse valence and arousal from the prompt string (simulating state access)
+def _generate_response_rules(prompt: str, state: Optional[CharacterState] = None) -> Optional[str]:
+    """
+    Sophisticated rule-based dialogue generation.
+    
+    Generates contextually aware responses based on character state,
+    beliefs, emotions, and traits.
+    """
+    # Parse valence and arousal from the prompt string
     v_match = re.search(r'valence=([-\d.]+)', prompt)
     a_match = re.search(r'arousal=([-\d.]+)', prompt)
     i_match = re.search(r'Intentions: (.+)', prompt)
-
+    char_match = re.search(r'Character ID: (.+)', prompt)
+    
     valence = float(v_match.group(1)) if v_match else 0.0
     arousal = float(a_match.group(1)) if a_match else 0.5
     intentions = i_match.group(1) if i_match else "(none)"
-
-    # Response selection logic
+    char_name = char_match.group(1) if char_match else "I"
+    
+    # Parse beliefs from prompt
+    beliefs_section = re.search(r'Beliefs \(proposition: probability\):\n(.*?)\n\nContext:', prompt, re.DOTALL)
+    belief_probs = {}
+    if beliefs_section:
+        for line in beliefs_section.group(1).strip().split('\n'):
+            match = re.match(r'\s+(\w+): ([\d.]+)', line)
+            if match:
+                belief_probs[match.group(1)] = float(match.group(2))
+    
+    # Parse traits from prompt
+    traits_match = re.search(r'Traits: (.+)', prompt)
+    traits = {}
+    if traits_match:
+        for item in traits_match.group(1).split(', '):
+            match = re.match(r'(\w+) \(([-\d.]+)\)', item)
+            if match:
+                traits[match.group(1)] = float(match.group(2))
+    
+    # Select response category based on emotional state
     if valence > 0.3:
-        if arousal > 0.6:
-            base = "I am thrilled by this! "
-        else:
-            base = "I am pleased to hear that. "
+        category = "positive_high_arousal" if arousal > 0.6 else "positive_low_arousal"
     elif valence < -0.3:
-        if arousal > 0.6:
-            base = "This is unacceptable! "
-        else:
-            base = "This is quite disappointing. "
+        category = "negative_high_arousal" if arousal > 0.6 else "negative_low_arousal"
     else:
-        if arousal > 0.6:
-            base = "I am listening intently. "
-        else:
-            base = "I see. "
-
-    if intentions != "(none)" and intentions != "None":
-         # simplistic check, might need better parsing in fallback
-        base += f"Regarding my goal of {intentions.split(',')[0]}, I think we should proceed carefully."
-    else:
-        base += "What else can you tell me?"
-
-    return base
+        category = "neutral_high_arousal" if arousal > 0.6 else "neutral_low_arousal"
+    
+    # Build context from beliefs
+    context_parts = []
+    for belief, prob in belief_probs.items():
+        if belief in BELIEF_CONTEXT:
+            is_high = prob > 0.5
+            context_parts.append(BELIEF_CONTEXT[belief][is_high])
+    
+    # Add trait-based modifier
+    for trait, value in traits.items():
+        if trait in TRAIT_MODIFIERS:
+            level = "high" if value > 0.5 else "low"
+            if random.random() > 0.5:  # Don't always add trait commentary
+                context_parts.append(TRAIT_MODIFIERS[trait][level])
+    
+    # Add intention if present
+    if intentions not in ["(none)", "None", ""]:
+        first_intention = intentions.split(',')[0].strip()
+        context_parts.append(f"Regarding {first_intention}, I must act decisively.")
+    
+    # Select and format response
+    templates = RESPONSE_TEMPLATES.get(category, RESPONSE_TEMPLATES["neutral_low_arousal"])
+    template = random.choice(templates)
+    
+    context = " ".join(context_parts[:2]) if context_parts else "What else would you have me know?"
+    
+    response = template.format(context=context)
+    
+    return response
 
 
 def produce_dialogue(state: CharacterState, user_message: str) -> str:
