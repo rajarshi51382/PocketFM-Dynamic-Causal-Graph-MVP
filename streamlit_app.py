@@ -39,6 +39,7 @@ from core.data_structures import (
     WorldState,
 )
 from core.llm_client import configure_client
+from state.timeline_seeds import TIMELINE_SEEDS, create_character_state_for_seed
 from reasoning.belief_update import apply_belief_updates
 from reasoning.causal_propagation import propagate_causal_effects
 from reasoning.state_update import propagate_state_updates
@@ -84,28 +85,7 @@ def _get_commit_label() -> str:
 
 
 def _create_default_character() -> CharacterState:
-    traits = TraitState(
-        traits={
-            "bravery": 0.8,
-            "honesty": 0.6,
-            "neuroticism": 0.4,
-            "trusting": 0.2,
-        }
-    )
-    beliefs = {
-        "castle_is_safe": BeliefNode("castle_is_safe", log_odds=1.5),
-        "forest_is_dangerous": BeliefNode("forest_is_dangerous", log_odds=1.0),
-        "king_is_wise": BeliefNode("king_is_wise", log_odds=0.5),
-    }
-    state = CharacterState(
-        character_id="Sir_Galahad",
-        traits=traits,
-        beliefs=beliefs,
-    )
-    state.add_causal_link(antecedent="castle_is_safe", consequent="king_is_wise", weight=0.8)
-    state.add_causal_link(antecedent="forest_is_dangerous", consequent="castle_is_safe", weight=0.5)
-    state.add_causal_link(antecedent="not_castle_is_safe", consequent="not_king_is_wise", weight=0.8)
-    return state
+    return create_character_state_for_seed("baseline")
 
 
 # ---------------------------------------------------------------------------
@@ -121,6 +101,8 @@ def _apply_api_key() -> None:
 def _init_session():
     if "character" not in st.session_state:
         st.session_state.character = _create_default_character()
+    if "timeline_seed" not in st.session_state:
+        st.session_state.timeline_seed = "baseline"
     if "world" not in st.session_state:
         st.session_state.world = WorldState()
     if "history" not in st.session_state:
@@ -162,6 +144,17 @@ with st.sidebar:
 
     # Character setup
     st.subheader("Character Setup")
+    seed_labels = {
+        key: value["label"] for key, value in TIMELINE_SEEDS.items()
+    }
+    seed_options = list(TIMELINE_SEEDS.keys())
+    seed_index = seed_options.index(st.session_state.timeline_seed)
+    selected_seed = st.selectbox(
+        "Timeline context",
+        seed_options,
+        index=seed_index,
+        format_func=lambda key: seed_labels.get(key, key),
+    )
     char_id = st.text_input(
         "Character name",
         value=st.session_state.character.character_id,
@@ -187,12 +180,13 @@ with st.sidebar:
                 "trusting": trusting,
             }
         )
-        new_char = _create_default_character()
-        new_char.character_id = char_id
+        new_char = create_character_state_for_seed(selected_seed)
+        new_char.character_id = char_id or new_char.character_id
         new_char.traits = new_traits
         st.session_state.character = new_char
         st.session_state.world = WorldState()
         st.session_state.history = []
+        st.session_state.timeline_seed = selected_seed
         st.success("Character reset!")
         st.rerun()
 
