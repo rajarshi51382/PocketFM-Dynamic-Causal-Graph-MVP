@@ -7,16 +7,15 @@ A lightweight structured-state framework for persistent fictional agents in long
 
 ## Live Demo
 
-**Try it online: [https://causal-character-graphs.streamlit.app](https://causal-character-graphs.streamlit.app)**
+**[https://causal-character-graphs.streamlit.app](https://causal-character-graphs.streamlit.app)**
 
 ## Test Scenarios and Grounded Context
 
 - Scenario checklist: `docs/scenarios.md`
 - Grounded context and assumptions: `docs/context.md`
 
-### All Features Work Free - No API Keys Required
+### No API Key Required
 
-The demo runs in your browser with no installation or API keys needed. All features are live:
 - **Belief revision** - log-odds updates as you chat
 - **Causal propagation** - A to B belief graph updates in real time
 - **Emotional state** - valence and arousal bars update after each turn
