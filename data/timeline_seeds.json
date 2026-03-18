@@ -40,5 +40,32 @@
         "respect": 0.7
       }
     }
+  },
+  "the_tortoise": {
+    "label": "The Tortoise",
+    "character_id": "Tortoise",
+    "timeline_index": 0,
+    "traits": {
+      "bravery": 0.3,
+      "honesty": 0.8,
+      "neuroticism": 0.0,
+      "trusting": 0.0,
+      "patience": 0.9,
+      "persistence": 1.0
+    },
+    "beliefs": {
+      "slow_and_steady_wins": 1.5,
+      "race_is_winnable": 1.2,
+      "hare_is_overconfident": 1.0
+    },
+    "relationships": {},
+    "causal_links": [
+      {
+        "antecedent": "slow_and_steady_wins",
+        "consequent": "race_is_winnable",
+        "weight": 0.8
+      }
+    ],
+    "world_constraints": []
   }
 }

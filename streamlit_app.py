@@ -164,55 +164,122 @@ with st.sidebar:
     st.divider()
 
     # Character setup
-    st.subheader("Character Setup")
+    st.subheader("🎭 Scenario Template")
     seed_labels = {
         key: value["label"] for key, value in TIMELINE_SEEDS.items()
     }
     seed_options = list(TIMELINE_SEEDS.keys())
-    seed_index = seed_options.index(st.session_state.timeline_seed)
+    
+    if st.session_state.timeline_seed in seed_options:
+        seed_index = seed_options.index(st.session_state.timeline_seed)
+    else:
+        seed_index = 0
+        
+    def on_seed_change():
+        new_seed = st.session_state.seed_selectbox
+        if new_seed != st.session_state.timeline_seed:
+            st.session_state.timeline_seed = new_seed
+            st.session_state.character = create_character_state_for_seed(new_seed)
+            st.session_state.world = WorldState()
+            st.session_state.history = []
+
     selected_seed = st.selectbox(
-        "Timeline context",
+        "Choose a character template",
         seed_options,
         index=seed_index,
         format_func=lambda key: seed_labels.get(key, key),
+        key="seed_selectbox",
+        on_change=on_seed_change
     )
     selected_meta = TIMELINE_SEEDS.get(selected_seed, {})
     seed_label = selected_meta.get("label", selected_seed)
     seed_time = selected_meta.get("timeline_index", "unknown")
     st.caption(f"Selected context: {seed_label} (t={seed_time})")
-    char_id = st.text_input(
-        "Character name",
-        value=st.session_state.character.character_id,
-    )
 
-    st.markdown("**Personality Traits** (-1 to +1)")
-    col_t1, col_t2 = st.columns(2)
-    bravery = col_t1.slider("Bravery", -1.0, 1.0,
-                             float(st.session_state.character.traits.get("bravery", 0.8)), 0.05)
-    honesty = col_t2.slider("Honesty", -1.0, 1.0,
-                             float(st.session_state.character.traits.get("honesty", 0.6)), 0.05)
-    neuroticism = col_t1.slider("Neuroticism", -1.0, 1.0,
-                                 float(st.session_state.character.traits.get("neuroticism", 0.4)), 0.05)
-    trusting = col_t2.slider("Trusting", -1.0, 1.0,
-                              float(st.session_state.character.traits.get("trusting", 0.2)), 0.05)
+    st.divider()
+    st.subheader("🧑 Character Setup")
+    
+    with st.expander("Name & Traits", expanded=True):
+        char_id = st.text_input(
+            "Character name",
+            value=st.session_state.character.character_id,
+        )
+
+        st.markdown("**Personality Traits (-1 to +1)**")
+        traits_dict = st.session_state.character.traits.traits
+        col_t1, col_t2 = st.columns(2)
+        traits_cols = [col_t1, col_t2]
+        edited_traits = {}
+        for i, (t_name, t_val) in enumerate(traits_dict.items()):
+            edited_traits[t_name] = traits_cols[i % 2].slider(
+                t_name.capitalize(), -1.0, 1.0, float(t_val), 0.05
+            )
+
+    with st.expander("💡 Beliefs"):
+        st.markdown("Initial log-odds (0 = neutral/50%)")
+        beliefs_data = [{"Proposition": k, "log_odds": v.log_odds} 
+                        for k, v in st.session_state.character.beliefs.items()]
+        edited_beliefs = st.data_editor(beliefs_data, num_rows="dynamic", key="edit_beliefs", use_container_width=True)
+
+    with st.expander("🔗 Causal Links"):
+        links_data = [{"Antecedent": l["antecedent"], "Consequent": l["consequent"], "Weight": l.get("weight", 1.0)} 
+                      for l in st.session_state.character.causal_links]
+        edited_links = st.data_editor(links_data, num_rows="dynamic", key="edit_links", use_container_width=True)
+
+    with st.expander("🤝 Relationships"):
+        rels_data = [{"Entity": k, "Trust": v.trust, "Affection": v.affection, "Respect": v.respect} 
+                     for k, v in st.session_state.character.relationships.items()]
+        edited_rels = st.data_editor(rels_data, num_rows="dynamic", key="edit_rels", use_container_width=True)
+        
+    with st.expander("🌍 World Constraints"):
+        constraints_data = [{"Constraint": c} for c in st.session_state.character.world_constraints]
+        edited_constraints = st.data_editor(constraints_data, num_rows="dynamic", key="edit_constraints", use_container_width=True)
 
     if st.button("Reset / Apply Character"):
-        new_traits = TraitState(
-            traits={
-                "bravery": bravery,
-                "honesty": honesty,
-                "neuroticism": neuroticism,
-                "trusting": trusting,
-            }
-        )
         new_char = create_character_state_for_seed(selected_seed)
         new_char.character_id = char_id or new_char.character_id
-        new_char.traits = new_traits
+        
+        new_char.traits = TraitState(traits=edited_traits)
+        
+        new_beliefs = {}
+        for row in edited_beliefs:
+            prop = str(row.get("Proposition", "")).strip()
+            if prop:
+                new_beliefs[prop.lower()] = BeliefNode(proposition=prop, log_odds=float(row.get("log_odds", 0.0)))
+        new_char.beliefs = new_beliefs
+        new_char.refresh_belief_schema()
+        
+        new_char.causal_links = []
+        for row in edited_links:
+            ant = str(row.get("Antecedent", "")).strip()
+            con = str(row.get("Consequent", "")).strip()
+            if ant and con:
+                new_char.add_causal_link(ant, con, float(row.get("Weight", 1.0)))
+                
+        new_rels = {}
+        for row in edited_rels:
+            ent = str(row.get("Entity", "")).strip()
+            if ent:
+                new_rels[ent] = RelationshipState(
+                    entity_id=ent, 
+                    trust=float(row.get("Trust", 0.5)),
+                    affection=float(row.get("Affection", 0.5)),
+                    respect=float(row.get("Respect", 0.5))
+                )
+        new_char.relationships = new_rels
+        
+        new_constraints = []
+        for row in edited_constraints:
+            c = str(row.get("Constraint", "")).strip()
+            if c:
+                new_constraints.append(c)
+        new_char.world_constraints = new_constraints
+        
         st.session_state.character = new_char
         st.session_state.world = WorldState()
         st.session_state.history = []
         st.session_state.timeline_seed = selected_seed
-        st.success("Character reset!")
+        st.success("Character reset and applied!")
         st.rerun()
 
     st.divider()

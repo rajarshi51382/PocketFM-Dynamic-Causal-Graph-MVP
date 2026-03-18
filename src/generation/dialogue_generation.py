@@ -16,6 +16,7 @@ import logging
 from typing import Optional, List
 
 from core.data_structures import CharacterState
+from core import llm_client
 
 logger = logging.getLogger(__name__)
 
@@ -157,29 +158,14 @@ def build_generation_prompt(state: CharacterState, user_message: str) -> str:
 
 def generate_response(prompt: str) -> Optional[str]:
     """
-    Generate dialogue using rule-based generation conditioned on embeddings graph.
-
-    Preconditions
-    -------------
-    prompt : str
-
-    Procedure
-    ---------
-    1. Generate rule-based response.
-
-    Postconditions
-    --------------
-    Returns generated response text
-
-    Parameters
-    ----------
-    prompt : str
-
-    Returns
-    -------
-    Optional[str]
-        Generated response text.
+    Generate dialogue using LLM conditioned on embeddings graph, 
+    falling back to rule-based logic.
     """
+    if llm_client.is_llm_available():
+        text = llm_client.generate_text(prompt)
+        if text:
+            return text
+            
     return _generate_response_rules(prompt)
 
 

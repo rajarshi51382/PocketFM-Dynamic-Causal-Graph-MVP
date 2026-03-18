@@ -83,32 +83,44 @@ def create_character_state_for_seed(
         raise ValueError(f"Unknown timeline seed: {seed_key}")
 
     seed = seeds[seed_key]
-    traits = TraitState(
-        traits={
-            "bravery": 0.8,
-            "honesty": 0.6,
-            "neuroticism": 0.4,
-            "trusting": 0.2,
-        }
-    )
+    traits_data = seed.get("traits", {
+        "bravery": 0.8,
+        "honesty": 0.6,
+        "neuroticism": 0.4,
+        "trusting": 0.2,
+    })
+    traits = TraitState(traits=traits_data)
+
     beliefs = {
         key: BeliefNode(key, log_odds=value)
-        for key, value in seed["beliefs"].items()
+        for key, value in seed.get("beliefs", {}).items()
     }
     relationships = {
         entity: RelationshipState(entity_id=entity, **values)
-        for entity, values in seed["relationships"].items()
+        for entity, values in seed.get("relationships", {}).items()
     }
 
+    character_id = seed.get("character_id", "Sir_Galahad")
+
     state = CharacterState(
-        character_id="Sir_Galahad",
+        character_id=character_id,
         traits=traits,
         beliefs=beliefs,
         relationships=relationships,
-        timeline_index=seed["timeline_index"],
-        knowledge_boundary=seed["timeline_index"],
+        timeline_index=seed.get("timeline_index", 0),
+        knowledge_boundary=seed.get("knowledge_boundary", seed.get("timeline_index", 0)),
     )
-    state.add_causal_link("castle_is_safe", "king_is_wise", weight=0.8)
-    state.add_causal_link("forest_is_dangerous", "castle_is_safe", weight=0.5)
-    state.add_causal_link("not_castle_is_safe", "not_king_is_wise", weight=0.8)
+    
+    causal_links = seed.get("causal_links")
+    if causal_links is not None:
+        for link in causal_links:
+            state.add_causal_link(link["antecedent"], link["consequent"], weight=link.get("weight", 1.0))
+    else:
+        state.add_causal_link("castle_is_safe", "king_is_wise", weight=0.8)
+        state.add_causal_link("forest_is_dangerous", "castle_is_safe", weight=0.5)
+        state.add_causal_link("not_castle_is_safe", "not_king_is_wise", weight=0.8)
+
+    world_constraints = seed.get("world_constraints", [])
+    state.world_constraints = world_constraints
+
     return state

@@ -98,3 +98,17 @@ def configure_client() -> bool:
 def is_llm_available() -> bool:
     """Check if any LLM backend is configured and available."""
     return get_api_key() is not None
+
+def generate_text(prompt: str) -> Optional[str]:
+    """Generate text using the active LLM backend."""
+    if _active_backend == "gemini":
+        try:
+            import google.generativeai as genai
+            model = genai.GenerativeModel(DEFAULT_MODEL_NAME)
+            response = model.generate_content(prompt)
+            if response and response.text:
+                return response.text
+        except Exception as e:
+            logger.error(f"Text generation failed: {e}")
+            return None
+    return None
